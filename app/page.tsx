@@ -61,7 +61,7 @@ export default function HomePage() {
               <div className="absolute top-4 left-4 flex gap-2">
                 <span className="px-2.5 py-1 bg-yellow-500 text-black text-xs font-bold rounded-lg">Featured</span>
                 <span className="px-2.5 py-1 bg-black/60 backdrop-blur text-white text-xs rounded-lg border border-white/10">
-                  {featured.format || featured.genre[0]}
+                  {featured.genre[0]}
                 </span>
               </div>
 
