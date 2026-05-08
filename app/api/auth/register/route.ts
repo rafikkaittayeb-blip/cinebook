@@ -5,7 +5,10 @@ import { sendOTPEmail } from '@/lib/email'
 
 export async function POST(req: NextRequest) {
   try {
-    const { name, email, phone } = await req.json()
+    const body = await req.json()
+    const name  = (body.name  ?? '').trim()
+    const email = (body.email ?? '').trim().toLowerCase()
+    const phone = (body.phone ?? '').trim()
 
     if (!name || !email) {
       return NextResponse.json({ error: 'Name and email are required' }, { status: 400 })
