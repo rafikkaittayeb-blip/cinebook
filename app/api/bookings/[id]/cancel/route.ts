@@ -30,8 +30,8 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
 
     const seatIds = booking.seats.map((bs: any) => bs.seatId)
     const pointsToReverse = booking.loyaltyTransactions
-      .filter(t => t.type === 'earned')
-      .reduce((sum, t) => sum + t.points, 0)
+      .filter((t: any) => t.type === 'earned')
+      .reduce((sum: number, t: any) => sum + t.points, 0)
 
     await prisma.$transaction(async tx => {
       await tx.booking.update({ where: { id }, data: { status: 'cancelled' } })
