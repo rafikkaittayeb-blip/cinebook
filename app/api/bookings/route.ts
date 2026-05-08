@@ -28,7 +28,7 @@ export async function GET() {
       showDate: b.showtime.date,
       showTime: b.showtime.time,
       format: b.showtime.format,
-      seats: b.seats.map(bs => `${bs.seat.row}${bs.seat.number}`),
+      seats: b.seats.map((bs: (typeof b.seats)[number]) => `${bs.seat.row}${bs.seat.number}`),
       totalPrice: b.totalPrice,
       status: b.status,
       qrCode: b.qrCode,
