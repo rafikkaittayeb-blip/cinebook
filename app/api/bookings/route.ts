@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
     const user = await getAuthUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const { showtimeId, seatIds, paymentMethod, cardLast4, useLoyalty } = await req.json()
+    const { showtimeId, seatIds, paymentMethod, cardLast4, useLoyalty, voucherId } = await req.json()
 
     if (!showtimeId || !seatIds?.length) {
       return NextResponse.json({ error: 'Showtime and seats are required' }, { status: 400 })
@@ -62,22 +62,41 @@ export async function POST(req: NextRequest) {
     const seats = await prisma.seat.findMany({
       where: { id: { in: seatIds }, showtimeId, status: 'available' },
     })
-
     if (seats.length !== seatIds.length) {
       return NextResponse.json({ error: 'One or more seats are no longer available' }, { status: 409 })
+    }
+
+    // Resolve voucher if provided
+    let voucher = null
+    if (voucherId) {
+      voucher = await prisma.voucher.findFirst({
+        where: { id: voucherId, userId: user.id, used: false, expiresAt: { gt: new Date() } },
+      })
+      if (!voucher) return NextResponse.json({ error: 'Voucher is invalid or expired' }, { status: 400 })
     }
 
     const seatTotal = seats.reduce((sum, s) => sum + s.price, 0)
     const bookingFee = 10
     let loyaltyUsed = 0
     let loyaltyDiscount = 0
+    let voucherDiscount = 0
 
-    if (useLoyalty && user.loyaltyPoints > 0) {
+    // Apply voucher discount (takes priority over loyalty points)
+    if (voucher) {
+      if (voucher.discountType === 'full') {
+        voucherDiscount = seatTotal + bookingFee  // entire booking free
+      } else if (voucher.discountType === 'fixed') {
+        voucherDiscount = Math.min(voucher.discountValue, seatTotal + bookingFee)
+      } else if (voucher.discountType === 'percentage') {
+        voucherDiscount = Math.round((seatTotal + bookingFee) * (voucher.discountValue / 100) * 100) / 100
+      }
+    } else if (useLoyalty && user.loyaltyPoints > 0) {
+      // Loyalty points discount (only if no voucher)
       loyaltyDiscount = Math.min(user.loyaltyPoints * 0.1, seatTotal * 0.2)
       loyaltyUsed = Math.ceil(loyaltyDiscount / 0.1)
     }
 
-    const totalPrice = seatTotal + bookingFee - loyaltyDiscount
+    const totalPrice = Math.max(0, seatTotal + bookingFee - voucherDiscount - loyaltyDiscount)
     const bookingRef = generateBookingRef()
     const qrCode = await generateQRCode(bookingRef)
 
@@ -89,7 +108,7 @@ export async function POST(req: NextRequest) {
           totalPrice,
           bookingRef,
           qrCode,
-          paymentMethod: paymentMethod || 'card',
+          paymentMethod: voucher?.discountType === 'full' ? 'voucher' : (paymentMethod || 'card'),
           loyaltyUsed,
         },
       })
@@ -112,18 +131,34 @@ export async function POST(req: NextRequest) {
         data: {
           bookingId: newBooking.id,
           amount: totalPrice,
-          method: paymentMethod || 'card',
+          method: voucher?.discountType === 'full' ? 'voucher' : (paymentMethod || 'card'),
           cardLast4: cardLast4 || null,
         },
       })
 
+      // Mark voucher as used
+      if (voucher) {
+        await tx.voucher.update({
+          where: { id: voucher.id },
+          data: { used: true, usedAt: new Date(), bookingId: newBooking.id },
+        })
+        await tx.loyaltyTransaction.create({
+          data: {
+            userId: user.id,
+            bookingId: newBooking.id,
+            points: 0,
+            type: 'redeemed',
+            description: `Voucher used: ${voucher.description} — ${showtime.movie.title}`,
+          },
+        })
+      }
+
+      // Loyalty points earned (based on what was actually paid)
       const pointsEarned = Math.floor(totalPrice)
       const newPoints = user.loyaltyPoints - loyaltyUsed + pointsEarned
-      const newTier = computeTier(newPoints)
-
       await tx.user.update({
         where: { id: user.id },
-        data: { loyaltyPoints: newPoints, tier: newTier },
+        data: { loyaltyPoints: newPoints, tier: computeTier(newPoints) },
       })
 
       if (loyaltyUsed > 0) {
@@ -138,15 +173,17 @@ export async function POST(req: NextRequest) {
         })
       }
 
-      await tx.loyaltyTransaction.create({
-        data: {
-          userId: user.id,
-          bookingId: newBooking.id,
-          points: pointsEarned,
-          type: 'earned',
-          description: `Booking — ${showtime.movie.title}`,
-        },
-      })
+      if (pointsEarned > 0) {
+        await tx.loyaltyTransaction.create({
+          data: {
+            userId: user.id,
+            bookingId: newBooking.id,
+            points: pointsEarned,
+            type: 'earned',
+            description: `Booking — ${showtime.movie.title}`,
+          },
+        })
+      }
 
       return newBooking
     })

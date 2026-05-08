@@ -22,19 +22,19 @@ interface LoyaltyData {
 }
 
 const REWARDS = [
-  { id: 'free-ticket', name: 'Free Movie Ticket', points: 500, icon: Zap, desc: 'One standard seat on any movie' },
-  { id: 'concession', name: 'EGP 50 Concession Voucher', points: 300, icon: Gift, desc: 'Valid at any CineBook counter' },
-  { id: 'priority', name: 'Priority Booking — 1 Month', points: 200, icon: TrendingUp, desc: 'Book before everyone else' },
+  { id: 'free_ticket',    type: 'free_ticket',    name: 'Free Movie Ticket',           points: 500, icon: Zap,         desc: 'Your entire next booking is on us — seats + fee' },
+  { id: 'concession_50', type: 'concession_50',   name: 'EGP 50 Concession Voucher',   points: 300, icon: Gift,        desc: 'EGP 50 off your next booking total' },
+  { id: 'priority_month',type: 'priority_month',  name: 'Priority Booking — 20% Off',  points: 200, icon: TrendingUp,  desc: '20% off your next booking' },
 ]
 
 export default function LoyaltyPage() {
-  const { user, loading: authLoading } = useAuth()
+  const { user, loading: authLoading, refreshUser } = useAuth()
   const router = useRouter()
 
   const [data, setData] = useState<LoyaltyData | null>(null)
   const [loading, setLoading] = useState(true)
-  const [redeemed, setRedeemed] = useState<string | null>(null)
   const [redeeming, setRedeeming] = useState<string | null>(null)
+  const [redeemError, setRedeemError] = useState<string | null>(null)
 
   useEffect(() => {
     if (authLoading) return
@@ -46,13 +46,25 @@ export default function LoyaltyPage() {
       .finally(() => setLoading(false))
   }, [user, authLoading])
 
-  const handleRedeem = (rewardId: string) => {
-    setRedeeming(rewardId)
-    setTimeout(() => {
+  const handleRedeem = async (type: string) => {
+    setRedeeming(type)
+    setRedeemError(null)
+    try {
+      const res = await fetch('/api/loyalty/redeem', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type }),
+      })
+      const json = await res.json()
+      if (!res.ok) { setRedeemError(json.error || 'Redemption failed'); return }
+      await refreshUser()
+      // Redirect to movies so they can pick a movie to use their voucher
+      router.push('/movies?voucher=1')
+    } catch {
+      setRedeemError('Network error. Please try again.')
+    } finally {
       setRedeeming(null)
-      setRedeemed(rewardId)
-      setTimeout(() => setRedeemed(null), 3000)
-    }, 1200)
+    }
   }
 
   const points = data?.points ?? 0
@@ -148,11 +160,13 @@ export default function LoyaltyPage() {
 
             <div className="space-y-4">
               <h2 className="text-lg font-serif font-bold text-white">Available Rewards</h2>
+              {redeemError && (
+                <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm">{redeemError}</div>
+              )}
               {REWARDS.map(reward => {
                 const Icon = reward.icon
                 const canRedeem = points >= reward.points
-                const isRedeeming = redeeming === reward.id
-                const isRedeemed = redeemed === reward.id
+                const isRedeeming = redeeming === reward.type
                 return (
                   <div key={reward.id} className={`bg-[#111] border rounded-xl p-5 flex items-center justify-between transition-all ${canRedeem ? 'border-[#2a2a2a] hover:border-yellow-500/30' : 'border-[#1e1e1e] opacity-60'}`}>
                     <div className="flex items-center gap-4">
@@ -165,15 +179,17 @@ export default function LoyaltyPage() {
                         <p className="text-yellow-500 font-bold text-sm mt-1">{reward.points} pts</p>
                       </div>
                     </div>
-                    <button onClick={() => canRedeem && handleRedeem(reward.id)} disabled={!canRedeem || isRedeeming}
+                    <button
+                      onClick={() => canRedeem && handleRedeem(reward.type)}
+                      disabled={!canRedeem || isRedeeming || !!redeeming}
                       className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all flex-shrink-0 ${
-                        isRedeemed ? 'bg-green-500/20 text-green-400 border border-green-500/30' :
-                        canRedeem && !isRedeeming ? 'bg-yellow-500 text-black hover:bg-yellow-400' :
-                        'bg-[#1a1a1a] text-gray-600 cursor-not-allowed border border-[#2a2a2a]'
+                        canRedeem && !isRedeeming && !redeeming
+                          ? 'bg-yellow-500 text-black hover:bg-yellow-400'
+                          : 'bg-[#1a1a1a] text-gray-600 cursor-not-allowed border border-[#2a2a2a]'
                       }`}>
-                      {isRedeemed ? (<><CheckCircle className="h-4 w-4" />Redeemed!</>) :
-                       isRedeeming ? (<><div className="h-4 w-4 rounded-full border-2 border-black border-t-transparent animate-spin" />Redeeming...</>) :
-                       (<>Redeem <ArrowRight className="h-4 w-4" /></>)}
+                      {isRedeeming
+                        ? (<><div className="h-4 w-4 rounded-full border-2 border-black border-t-transparent animate-spin" />Redeeming...</>)
+                        : (<>Redeem & Book <ArrowRight className="h-4 w-4" /></>)}
                     </button>
                   </div>
                 )

@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
-import { Search, Star, Clock, ChevronRight, SlidersHorizontal } from 'lucide-react'
+import { Search, Star, Clock, ChevronRight, SlidersHorizontal, Zap } from 'lucide-react'
 
 interface Movie {
   id: string
@@ -21,7 +22,10 @@ interface Movie {
 const GENRES = ['All', 'Action', 'Drama', 'Sci-Fi', 'Thriller', 'Fantasy', 'Comedy', 'Mystery', 'Crime', 'History', 'Romance', 'Family']
 const SORT_OPTIONS = ['Default', 'Rating: High to Low', 'Duration: Short to Long', 'Release Date: Newest']
 
-export default function MoviesPage() {
+function MoviesContent() {
+  const searchParams = useSearchParams()
+  const hasVoucher = searchParams.get('voucher') === '1'
+
   const [movies, setMovies] = useState<Movie[]>([])
   const [search, setSearch] = useState('')
   const [activeGenre, setActiveGenre] = useState('All')
@@ -54,6 +58,16 @@ export default function MoviesPage() {
 
   return (
     <main className="min-h-screen bg-[#0a0a0a]">
+      {hasVoucher && (
+        <div className="bg-yellow-500/10 border-b border-yellow-500/30 px-4 py-3">
+          <div className="mx-auto max-w-7xl flex items-center gap-3">
+            <Zap className="h-4 w-4 text-yellow-500 flex-shrink-0" />
+            <p className="text-yellow-400 text-sm font-medium">
+              Your voucher is ready! Pick a movie, select a showtime and seats — your discount will be applied automatically at checkout.
+            </p>
+          </div>
+        </div>
+      )}
       <div className="border-b border-[#1a1a1a] bg-[#0d0d0d] py-10 px-4">
         <div className="mx-auto max-w-7xl">
           <h1 className="text-4xl font-serif font-bold text-white mb-2">All Movies</h1>
@@ -158,5 +172,17 @@ export default function MoviesPage() {
         </div>
       </section>
     </main>
+  )
+}
+
+export default function MoviesPage() {
+  return (
+    <Suspense fallback={
+      <main className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
+        <div className="h-8 w-8 rounded-full border-2 border-yellow-500 border-t-transparent animate-spin" />
+      </main>
+    }>
+      <MoviesContent />
+    </Suspense>
   )
 }
