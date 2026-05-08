@@ -1,0 +1,141 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id            String   @id @default(cuid())
+  name          String
+  email         String   @unique
+  phone         String?
+  isVerified    Boolean  @default(false)
+  loyaltyPoints Int      @default(0)
+  tier          String   @default("Bronze")
+  memberSince   DateTime @default(now())
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  otpCodes            OTPCode[]
+  bookings            Booking[]
+  loyaltyTransactions LoyaltyTransaction[]
+}
+
+model OTPCode {
+  id        String   @id @default(cuid())
+  email     String
+  code      String
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id])
+}
+
+model Movie {
+  id          String   @id @default(cuid())
+  title       String
+  genre       String[]
+  rating      Float
+  releaseDate String
+  duration    Int
+  description String
+  cast        String[]
+  poster      String
+  backdrop    String
+  language    String   @default("English")
+  price       Float
+  trailerUrl  String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  showtimes Showtime[]
+}
+
+model Showtime {
+  id             String   @id @default(cuid())
+  movieId        String
+  date           String
+  time           String
+  format         String   @default("Standard")
+  availableSeats Int      @default(120)
+  price          Float
+  createdAt      DateTime @default(now())
+
+  movie    Movie     @relation(fields: [movieId], references: [id])
+  seats    Seat[]
+  bookings Booking[]
+}
+
+model Seat {
+  id         String @id @default(cuid())
+  showtimeId String
+  row        String
+  number     Int
+  status     String @default("available")
+  price      Float
+
+  showtime     Showtime      @relation(fields: [showtimeId], references: [id])
+  bookingSeats BookingSeat[]
+
+  @@unique([showtimeId, row, number])
+}
+
+model Booking {
+  id            String   @id @default(cuid())
+  userId        String
+  showtimeId    String
+  totalPrice    Float
+  status        String   @default("confirmed")
+  bookingRef    String   @unique
+  qrCode        String?
+  paymentMethod String?
+  loyaltyUsed   Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user                User                 @relation(fields: [userId], references: [id])
+  showtime            Showtime             @relation(fields: [showtimeId], references: [id])
+  seats               BookingSeat[]
+  payment             Payment?
+  loyaltyTransactions LoyaltyTransaction[]
+}
+
+model BookingSeat {
+  id        String @id @default(cuid())
+  bookingId String
+  seatId    String
+
+  booking Booking @relation(fields: [bookingId], references: [id])
+  seat    Seat    @relation(fields: [seatId], references: [id])
+
+  @@unique([bookingId, seatId])
+}
+
+model Payment {
+  id        String   @id @default(cuid())
+  bookingId String   @unique
+  amount    Float
+  method    String
+  status    String   @default("completed")
+  cardLast4 String?
+  createdAt DateTime @default(now())
+
+  booking Booking @relation(fields: [bookingId], references: [id])
+}
+
+model LoyaltyTransaction {
+  id          String   @id @default(cuid())
+  userId      String
+  bookingId   String?
+  points      Int
+  type        String
+  description String
+  createdAt   DateTime @default(now())
+
+  user    User     @relation(fields: [userId], references: [id])
+  booking Booking? @relation(fields: [bookingId], references: [id])
+}

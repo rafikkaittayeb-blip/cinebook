@@ -1,0 +1,125 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = "postgresql://postgres:RKN#r@rq5tz,2Ff@db.ahlglcmudxyhxjvzhozy.supabase.co:5432/postgres"
+}
+
+model User {
+  id                String               @id @default(cuid())
+  fullName          String
+  email             String               @unique
+  phone             String
+  passwordHash      String
+  isVerified        Boolean              @default(false)
+  loyaltyPoints     Int                  @default(0)
+  tier              String               @default("Bronze")
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+
+  bookings          Booking[]
+  loyaltyTransactions LoyaltyTransaction[]
+  otpCodes          OtpCode[]
+}
+
+model OtpCode {
+  id        String   @id @default(cuid())
+  userId    String
+  code      String
+  type      String   // "register" or "login"
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Movie {
+  id          String     @id @default(cuid())
+  slug        String     @unique
+  title       String
+  description String
+  genres      String[]
+  rating      Float
+  releaseDate DateTime
+  duration    Int
+  posterUrl   String
+  backdropUrl String
+  language    String
+  price       Float
+  trailerUrl  String
+  createdAt   DateTime   @default(now())
+
+  showtimes   Showtime[]
+}
+
+model Showtime {
+  id             String    @id @default(cuid())
+  movieId        String
+  date           DateTime
+  time           String
+  format         String    @default("Standard")
+  availableSeats Int
+  price          Float
+  createdAt      DateTime  @default(now())
+
+  movie          Movie     @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  seats          Seat[]
+  bookings       Booking[]
+}
+
+model Seat {
+  id         String   @id @default(cuid())
+  showtimeId String
+  row        String
+  number     Int
+  status     String   @default("available")
+  price      Float
+  createdAt  DateTime @default(now())
+
+  showtime   Showtime @relation(fields: [showtimeId], references: [id], onDelete: Cascade)
+}
+
+model Booking {
+  id          String   @id @default(cuid())
+  userId      String
+  showtimeId  String
+  seats       String[]
+  totalPrice  Float
+  status      String   @default("confirmed")
+  qrCode      String?
+  refundedAt  DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  showtime    Showtime @relation(fields: [showtimeId], references: [id])
+  payment     Payment?
+  loyaltyTransactions LoyaltyTransaction[]
+}
+
+model Payment {
+  id            String   @id @default(cuid())
+  bookingId     String   @unique
+  amount        Float
+  method        String
+  status        String   @default("success")
+  loyaltyUsed   Int      @default(0)
+  processedAt   DateTime @default(now())
+
+  booking       Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+}
+
+model LoyaltyTransaction {
+  id        String   @id @default(cuid())
+  userId    String
+  bookingId String?
+  type      String   // "earned" or "redeemed"
+  points    Int
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  booking   Booking? @relation(fields: [bookingId], references: [id])
+}

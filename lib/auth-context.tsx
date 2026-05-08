@@ -1,63 +1,98 @@
 'use client'
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
-import { User, MOCK_USERS } from './mock-data'
+
+export interface User {
+  id: string
+  name: string
+  email: string
+  phone: string | null
+  loyaltyPoints: number
+  memberSince: string
+  tier: 'Bronze' | 'Silver' | 'Gold'
+}
 
 interface AuthContextType {
   user: User | null
-  login: (email: string, password: string) => boolean
-  register: (name: string, email: string, phone: string) => boolean
-  logout: () => void
   loading: boolean
+  sendOTP: (email: string) => Promise<{ success: boolean; error?: string }>
+  registerUser: (name: string, email: string, phone: string) => Promise<{ success: boolean; error?: string }>
+  verifyOTP: (email: string, otp: string) => Promise<{ success: boolean; error?: string }>
+  logout: () => void
+  refreshUser: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    const stored = localStorage.getItem('cinebook_user')
-    if (stored) {
-      setUser(JSON.parse(stored))
+  const refreshUser = async () => {
+    try {
+      const res = await fetch('/api/auth/me')
+      const data = await res.json()
+      setUser(data.user ?? null)
+    } catch {
+      setUser(null)
+    } finally {
+      setLoading(false)
     }
-  }, [])
-
-  const login = (email: string, password: string): boolean => {
-    setLoading(true)
-    setTimeout(() => setLoading(false), 600)
-    // demo: any email/password works
-    const found = MOCK_USERS.find(u => u.email === email) || { ...MOCK_USERS[0], email, name: email.split('@')[0] }
-    setUser(found)
-    localStorage.setItem('cinebook_user', JSON.stringify(found))
-    return true
   }
 
-  const register = (name: string, email: string, phone: string): boolean => {
-    setLoading(true)
-    const newUser: User = {
-      id: 'user-' + Date.now(),
-      name,
-      email,
-      phone,
-      loyaltyPoints: 0,
-      memberSince: new Date().toISOString().split('T')[0],
-      tier: 'Bronze'
+  useEffect(() => { refreshUser() }, [])
+
+  const sendOTP = async (email: string) => {
+    try {
+      const res = await fetch('/api/auth/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      })
+      const data = await res.json()
+      return res.ok ? { success: true } : { success: false, error: data.error }
+    } catch {
+      return { success: false, error: 'Network error. Please try again.' }
     }
-    setUser(newUser)
-    localStorage.setItem('cinebook_user', JSON.stringify(newUser))
-    setTimeout(() => setLoading(false), 600)
-    return true
+  }
+
+  const registerUser = async (name: string, email: string, phone: string) => {
+    try {
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, phone }),
+      })
+      const data = await res.json()
+      return res.ok ? { success: true } : { success: false, error: data.error }
+    } catch {
+      return { success: false, error: 'Network error. Please try again.' }
+    }
+  }
+
+  const verifyOTP = async (email: string, otp: string) => {
+    try {
+      const res = await fetch('/api/auth/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, otp }),
+      })
+      const data = await res.json()
+      if (!res.ok) return { success: false, error: data.error }
+      setUser(data.user)
+      return { success: true }
+    } catch {
+      return { success: false, error: 'Network error. Please try again.' }
+    }
   }
 
   const logout = () => {
     setUser(null)
-    localStorage.removeItem('cinebook_user')
+    fetch('/api/auth/logout', { method: 'POST' }).catch(() => {})
   }
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, loading }}>
+    <AuthContext.Provider value={{ user, loading, sendOTP, registerUser, verifyOTP, logout, refreshUser }}>
       {children}
     </AuthContext.Provider>
   )
