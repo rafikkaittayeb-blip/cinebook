@@ -18,7 +18,7 @@ export async function GET() {
       orderBy: { createdAt: 'desc' },
     })
 
-    const formatted = bookings.map(b => ({
+    const formatted = bookings.map((b: (typeof bookings)[number]) => ({
       id: b.id,
       bookingRef: b.bookingRef,
       movieId: b.showtime.movieId,
