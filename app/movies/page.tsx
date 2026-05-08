@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import Image from 'next/image'
+import { MovieImage } from '@/components/movie-image'
 import { Search, Star, Clock, ChevronRight, SlidersHorizontal, Zap } from 'lucide-react'
 
 interface Movie {
@@ -139,7 +139,7 @@ function MoviesContent() {
                 <Link key={movie.id} href={`/movies/${movie.id}`} className="group">
                   <div className="movie-card bg-[#111] border border-[#2a2a2a] rounded-xl overflow-hidden h-full flex flex-col">
                     <div className="relative aspect-[2/3] overflow-hidden bg-[#1a1a1a]">
-                      <Image src={movie.poster} alt={movie.title} fill className="object-cover group-hover:scale-105 transition-transform duration-500" sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" />
+                      <MovieImage src={movie.poster} alt={movie.title} fill className="object-cover group-hover:scale-105 transition-transform duration-500" sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" />
                       <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
                         <span className="flex items-center gap-2 px-5 py-2.5 bg-yellow-500 text-black font-bold rounded-lg text-sm">Book Now <ChevronRight className="h-4 w-4" /></span>
                       </div>

@@ -2,7 +2,7 @@
 
 import { use, useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import Image from 'next/image'
+import { MovieImage } from '@/components/movie-image'
 import Link from 'next/link'
 import { ArrowLeft, Star, Clock, Calendar, Users, Play, ChevronRight } from 'lucide-react'
 
@@ -96,7 +96,7 @@ export default function MovieDetailPage({ params }: { params: Promise<{ id: stri
   return (
     <main className="min-h-screen bg-[#0a0a0a]">
       <div className="relative h-72 sm:h-96 overflow-hidden">
-        <Image src={movie.backdrop || movie.poster} alt={movie.title} fill className="object-cover object-top" priority />
+        <MovieImage src={movie.backdrop || movie.poster} alt={movie.title} fill className="object-cover object-top" priority />
         <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/60 to-transparent" />
         <button onClick={() => router.back()} className="absolute top-6 left-6 flex items-center gap-2 px-3 py-1.5 bg-black/60 backdrop-blur rounded-lg text-gray-300 hover:text-yellow-400 transition-colors text-sm">
           <ArrowLeft className="h-4 w-4" /> Back
@@ -108,7 +108,7 @@ export default function MovieDetailPage({ params }: { params: Promise<{ id: stri
           <div className="lg:col-span-1">
             <div className="sticky top-24">
               <div className="aspect-[2/3] rounded-xl overflow-hidden border border-[#2a2a2a] shadow-2xl shadow-black">
-                <Image src={movie.poster} alt={movie.title} width={400} height={600} className="w-full h-full object-cover" />
+                <MovieImage src={movie.poster} alt={movie.title} width={400} height={600} className="w-full h-full object-cover" />
               </div>
               <div className="grid grid-cols-3 gap-2 mt-4">
                 {[

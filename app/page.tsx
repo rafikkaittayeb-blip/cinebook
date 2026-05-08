@@ -2,8 +2,9 @@
 
 import { useState, useMemo, useEffect } from 'react'
 import Link from 'next/link'
-import Image from 'next/image'
+
 import { Search, Star, Clock, ChevronRight, Film } from 'lucide-react'
+import { MovieImage } from '@/components/movie-image'
 
 interface Movie {
   id: string
@@ -67,7 +68,7 @@ export default function HomePage() {
 
           <div className="grid lg:grid-cols-2 gap-4 mb-4">
             <Link href={`/movies/${featured.id}`} className="group relative rounded-2xl overflow-hidden aspect-[3/4] lg:aspect-auto lg:min-h-[580px] block">
-              <Image src={featured.poster} alt={featured.title} fill className="object-cover group-hover:scale-105 transition-transform duration-700" priority />
+              <MovieImage src={featured.poster} alt={featured.title} fill className="object-cover group-hover:scale-105 transition-transform duration-700" priority />
               <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
               <div className="absolute top-4 left-4 flex gap-2">
                 <span className="px-2.5 py-1 bg-yellow-500 text-black text-xs font-bold rounded-lg">Featured</span>
@@ -92,7 +93,7 @@ export default function HomePage() {
             <div className="grid grid-cols-2 gap-4">
               {secondaryFeatured.map(movie => (
                 <Link key={movie.id} href={`/movies/${movie.id}`} className="group relative rounded-xl overflow-hidden aspect-[2/3] block">
-                  <Image src={movie.poster} alt={movie.title} fill className="object-cover group-hover:scale-105 transition-transform duration-500" />
+                  <MovieImage src={movie.poster} alt={movie.title} fill className="object-cover group-hover:scale-105 transition-transform duration-500" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
                   <div className="absolute top-2.5 right-2.5 flex items-center gap-1 px-2 py-0.5 bg-black/70 backdrop-blur rounded-lg">
                     <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />
@@ -179,7 +180,7 @@ export default function HomePage() {
                 <Link key={movie.id} href={`/movies/${movie.id}`} className="group">
                   <div className="movie-card bg-[#111] border border-[#2a2a2a] rounded-xl overflow-hidden h-full flex flex-col">
                     <div className="relative aspect-[2/3] overflow-hidden bg-[#1a1a1a]">
-                      <Image src={movie.poster} alt={movie.title} fill className="object-cover group-hover:scale-105 transition-transform duration-500" sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw" />
+                      <MovieImage src={movie.poster} alt={movie.title} fill className="object-cover group-hover:scale-105 transition-transform duration-500" sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw" />
                       <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
                         <span className="flex items-center gap-1.5 px-4 py-2 bg-yellow-500 text-black font-bold rounded-lg text-xs">Book Now <ChevronRight className="h-3.5 w-3.5" /></span>
                       </div>
