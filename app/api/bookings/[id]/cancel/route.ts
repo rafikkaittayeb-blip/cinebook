@@ -28,7 +28,7 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
       return NextResponse.json({ error: 'Cannot cancel within 2 hours of showtime' }, { status: 400 })
     }
 
-    const seatIds = booking.seats.map(bs => bs.seatId)
+    const seatIds = booking.seats.map((bs: any) => bs.seatId)
     const pointsToReverse = booking.loyaltyTransactions
       .filter(t => t.type === 'earned')
       .reduce((sum, t) => sum + t.points, 0)
