@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
 import { prisma } from '@/lib/prisma'
 import { signToken, computeTier } from '@/lib/auth'
 
@@ -13,7 +12,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Email and OTP are required' }, { status: 400 })
     }
 
-    // Look up the most recent unused, unexpired OTP for this email
+    // Find the most recent valid OTP for this email
     const record = await prisma.oTPCode.findFirst({
       where: {
         email,
@@ -25,29 +24,21 @@ export async function POST(req: NextRequest) {
     })
 
     if (!record) {
-      // Help diagnose: check if any OTP exists at all for this email
+      // Diagnose why it failed
       const anyRecord = await prisma.oTPCode.findFirst({
         where: { email },
         orderBy: { createdAt: 'desc' },
       })
 
       if (!anyRecord) {
-        console.error(`[verify-otp] No OTP records found for ${email}`)
         return NextResponse.json({ error: 'No code was sent to this email. Please request a new one.' }, { status: 400 })
       }
-
       if (anyRecord.used) {
-        console.error(`[verify-otp] OTP already used for ${email}`)
         return NextResponse.json({ error: 'This code has already been used. Please request a new one.' }, { status: 400 })
       }
-
       if (new Date(anyRecord.expiresAt) <= new Date()) {
-        console.error(`[verify-otp] OTP expired for ${email}`)
-        return NextResponse.json({ error: 'Code has expired. Please request a new one.' }, { status: 400 })
+        return NextResponse.json({ error: 'Code has expired (10 min limit). Please request a new one.' }, { status: 400 })
       }
-
-      // Code exists, not expired, not used — must be a wrong code
-      console.error(`[verify-otp] Wrong code for ${email}. Got: "${otp}", stored: "${anyRecord.code}"`)
       return NextResponse.json({ error: 'Incorrect code. Please check and try again.' }, { status: 400 })
     }
 
@@ -59,16 +50,9 @@ export async function POST(req: NextRequest) {
     })
 
     const token = signToken(user.id)
-    const cookieStore = await cookies()
-    cookieStore.set('cinebook_token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
-      maxAge: 7 * 24 * 60 * 60,
-    })
 
-    return NextResponse.json({
+    // Use NextResponse.cookies.set — the correct way to set cookies in Route Handlers
+    const response = NextResponse.json({
       user: {
         id: user.id,
         name: user.name,
@@ -79,10 +63,23 @@ export async function POST(req: NextRequest) {
         tier: computeTier(user.loyaltyPoints),
       },
     })
+
+    response.cookies.set('cinebook_token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 7 * 24 * 60 * 60,
+    })
+
+    return response
+
   } catch (err) {
-    console.error('[verify-otp] Unexpected error:', err)
+    // Return the real error message so we can see what's wrong
+    const message = err instanceof Error ? err.message : String(err)
+    console.error('[verify-otp] Error:', message)
     return NextResponse.json(
-      { error: 'Verification failed. Please try again.' },
+      { error: `Verification error: ${message}` },
       { status: 500 }
     )
   }
