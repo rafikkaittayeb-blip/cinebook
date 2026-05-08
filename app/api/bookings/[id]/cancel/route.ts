@@ -33,7 +33,7 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
       .filter((t: any) => t.type === 'earned')
       .reduce((sum: number, t: any) => sum + t.points, 0)
 
-    await prisma.$transaction(async tx => {
+    await prisma.$transaction(async (tx: any) => {
       await tx.booking.update({ where: { id }, data: { status: 'cancelled' } })
 
       await tx.seat.updateMany({
