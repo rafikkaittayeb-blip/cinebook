@@ -190,16 +190,24 @@ export async function POST(req: NextRequest) {
 
     const seatLabels = seats.map(s => `${s.row}${s.number}`)
 
-    sendBookingConfirmation(user.email, user.name, {
-      ref: bookingRef,
-      movieTitle: showtime.movie.title,
-      date: showtime.date,
-      time: showtime.time,
-      format: showtime.format,
-      seats: seatLabels,
-      total: totalPrice,
-      qrCodeDataUrl: qrCode,
-    }).catch(err => console.error('Email error:', err))
+    let emailSent = false
+    let emailError = ''
+    try {
+      await sendBookingConfirmation(user.email, user.name, {
+        ref: bookingRef,
+        movieTitle: showtime.movie.title,
+        date: showtime.date,
+        time: showtime.time,
+        format: showtime.format,
+        seats: seatLabels,
+        total: totalPrice,
+        qrCodeDataUrl: qrCode,
+      })
+      emailSent = true
+    } catch (err) {
+      emailError = err instanceof Error ? err.message : String(err)
+      console.error('[booking] Confirmation email failed:', emailError)
+    }
 
     return NextResponse.json({
       booking: {
@@ -213,6 +221,8 @@ export async function POST(req: NextRequest) {
         totalPrice,
         qrCode,
         status: 'confirmed',
+        emailSent,
+        emailError: emailError || undefined,
       },
     })
   } catch (err) {
