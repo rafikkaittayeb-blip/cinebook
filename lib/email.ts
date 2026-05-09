@@ -6,8 +6,8 @@ const OWNER_EMAIL = 'el.rafik@aucegypt.edu'
 export async function sendOTPEmail(email: string, name: string, otp: string) {
   await resend.emails.send({
     from: 'CineBook <onboarding@resend.dev>',
-    to: OWNER_EMAIL,
-    subject: `CineBook OTP for ${email}: ${otp}`,
+    to: email,
+    subject: `Your CineBook verification code: ${otp}`,
     html: `
 <!DOCTYPE html>
 <html>
@@ -69,8 +69,8 @@ export async function sendBookingConfirmation(
 
   await resend.emails.send({
     from: 'CineBook <onboarding@resend.dev>',
-    to: OWNER_EMAIL,
-    subject: `Booking Confirmed — ${booking.movieTitle} (for ${email})`,
+    to: email,
+    subject: `Booking Confirmed — ${booking.movieTitle}`,
     html: `
 <!DOCTYPE html>
 <html>
@@ -150,8 +150,8 @@ export async function sendReminderEmail(email: string, name: string, booking: Re
 
   await resend.emails.send({
     from: 'CineBook <onboarding@resend.dev>',
-    to: OWNER_EMAIL,
-    subject: `🎬 Reminder: ${booking.movieTitle} is tomorrow! (for ${email})`,
+    to: email,
+    subject: `🎬 Reminder: ${booking.movieTitle} is tomorrow!`,
     html: `
 <!DOCTYPE html>
 <html>
